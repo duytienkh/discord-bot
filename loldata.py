@@ -77,28 +77,29 @@ class LOLData():
 
             x += _w + padding
 
-        def write_image(team_name, align='left'):
+        def write_image(team_image, team_name, align='left'):
             nonlocal row_height, x
-            image = Image.open(img_path + team_name + '.png')
-            image = image.resize((image.width * 64//image.height, 64)).convert('RGBA')
-            if align == 'left':
-                img.paste(image, (x, y - image.height//4), image)
-            if align == 'right':
-                img.paste(image, (x + 200 - image.width, y - image.height//4), image)
-            
+
+            if self.get_filename_url_to_open(team_image, img_path + team_name):
+                image = Image.open(img_path + team_name + '.png')
+                image = image.resize((image.width * 64//image.height, 64)).convert('RGBA')
+                if align == 'left':
+                    img.paste(image, (x, y - image.height//4), image)
+                if align == 'right':
+                    img.paste(image, (x + 200 - image.width, y - image.height//4), image)
+
+                if image.height > row_height:
+                    row_height = image.height
+
             x += 200 + padding
-            if image.height > row_height:
-                row_height = image.height
 
         for match in matches:
-            self.get_filename_url_to_open(match['Image1'], img_path + match['Team1'])
-            self.get_filename_url_to_open(match['Image2'], img_path + match['Team2'])
             write_text(f"[{match['ShownName']}] ({match['DateTime UTC']} - BO{match['BestOf']})")
             x += 2 * padding
             # paste teams image
-            write_image(match['Team1'], align='right')
+            write_image(match['Image1'], match['Team1'], align='right')
             write_text(' - ')
-            write_image(match['Team2'], align='left')
+            write_image(match['Image2'], match['Team2'], align='left')
 
             y += row_height + padding
             x = base_x
@@ -114,8 +115,12 @@ class LOLData():
         result = self.site.api('parse', title='Main Page', text=to_parse_text, disablelimitreport=1)
         parse_result_text = result['parse']['text']['*']
 
-        url = re.match(pattern, parse_result_text)[1]
-        #In case you would like to save the image in a specific location, you can add the path after 'url,' in the line below.
-        urllib.request.urlretrieve(url, save_name + '.png')
-
+        try:
+            url = re.match(pattern, parse_result_text)[1]
+            #In case you would like to save the image in a specific location, you can add the path after 'url,' in the line below.
+            urllib.request.urlretrieve(url, save_name + '.png')
+            return True
+        except Exception as e:
+            pass
+        return False
 # print(LOLData().filtered_matches(to_string=True))
