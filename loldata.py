@@ -5,14 +5,16 @@ class LOLData():
     def __init__(self) -> None:
         self.site = mwclient.Site('lol.fandom.com', path='/')
         self.dt = datetime.utcnow()
+        self.white_list = ['LCK', 'LPL', 'LCS', 'LEC', 'VCS']
     
     # Return all matches from db
     def matches(self):
+        self.dt = datetime.utcnow()
         res = self.site.api('cargoquery', 
             limit = 'max',
             tables = "MatchSchedule=MS",
             fields = "MS.Team1, MS.Team2, MS.DateTime_UTC, MS.ShownName, MS.BestOf",
-            where = f"MS.DateTime_UTC >= '{self.dt.strftime('%Y-%m-%d')}'",
+            where = f"MS.DateTime_UTC >= '{self.dt.strftime('%Y-%m-%d %H:%M:%S')}'",
             order_by = "MS.DateTime_UTC"
         )
 
@@ -20,16 +22,16 @@ class LOLData():
         return res
 
     # Return all matches of filtered leagues
-    def filtered_matches(self, max=10, to_string = False, filter='global'):
+    def filtered_matches(self, max=10, to_string = False, regions='global'):
         def league_filter(match):
-            white_list = ['LCK', 'LPL', 'LCS', 'LEC', 'VCS'] if filter == 'global' else [str(filter).upper()]
+            white_list = self.white_list if regions == 'global' else [str(region).upper() for region in regions]
             for el in white_list:
                 if match['ShownName'].startswith(el + ' ' + str(self.dt.year)):
                     return True
             return False    
 
         def match_to_string(match):
-            return f"[{match['ShownName']}] {match['Team1']} - {match['Team2']} ({match['DateTime UTC']} - BO{match['BestOf']})\n"
+            return f"[{match['ShownName']}] ({match['DateTime UTC']} - BO{match['BestOf']}) {match['Team1']} - {match['Team2']}\n"
 
         def shift_datetime(match):
             dt = datetime.strptime(match['DateTime UTC'], '%Y-%m-%d %H:%M:%S')

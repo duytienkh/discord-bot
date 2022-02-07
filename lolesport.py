@@ -18,7 +18,11 @@ async def about(ctx):
     await ctx.send('Pleased to meet you!')
 
 @bot.command(name='schedule')
-async def schedule(ctx, arg1):
-    await ctx.send(loldata.filtered_matches(max=10, to_string=True, filter=arg1))
+async def schedule(ctx, *args):
+    regions = 'global'
+    if args.__len__() >= 1:
+        regions = args
+    # print(regions)
+    await ctx.send(loldata.filtered_matches(max=10, to_string=True, regions=regions))
 
 bot.run(token)
