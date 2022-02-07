@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from discord.ext import commands
+import discord
 from loldata import LOLData
 
 load_dotenv()
@@ -25,4 +26,18 @@ async def schedule(ctx, *args):
     # print(regions)
     await ctx.send(loldata.filtered_matches(max=10, to_string=True, regions=regions))
 
+@bot.command()
+async def test(ctx, *args):
+    regions = 'global'
+    if args.__len__() >= 1:
+        regions = args
+    await ctx.send(file=discord.File(loldata.filtered_matches_image(regions=regions)))
+""" 
+TODO: 
+    - standings, 
+    - games start notification, 
+    - games finish notification, 
+    - roster changes notifications, 
+    - lines up
+"""
 bot.run(token)

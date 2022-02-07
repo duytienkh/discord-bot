@@ -1,5 +1,8 @@
 import mwclient
 from datetime import datetime, timezone, timedelta
+import urllib.request
+import re
+from PIL import Image, ImageDraw, ImageFont
 
 class LOLData():
     def __init__(self) -> None:
@@ -12,9 +15,10 @@ class LOLData():
         self.dt = datetime.utcnow()
         res = self.site.api('cargoquery', 
             limit = 'max',
-            tables = "MatchSchedule=MS",
-            fields = "MS.Team1, MS.Team2, MS.DateTime_UTC, MS.ShownName, MS.BestOf",
+            tables = "MatchSchedule=MS,Teams=T1,Teams=T2",
+            fields = "MS.Team1, MS.Team2, MS.DateTime_UTC, MS.ShownName, MS.BestOf, T1.Image=Image1, T2.Image=Image2",
             where = f"MS.DateTime_UTC >= '{self.dt.strftime('%Y-%m-%d %H:%M:%S')}'",
+            join_on = "MS.Team1=T1.Name,MS.Team2=T2.Name",
             order_by = "MS.DateTime_UTC"
         )
 
@@ -52,5 +56,66 @@ class LOLData():
         
         return res_str if to_string else res
 
+    def filtered_matches_image(self, max=10, regions='global'):
+        matches = self.filtered_matches(max, to_string=False, regions=regions)
+        len = matches.__len__()
+        img = Image.new(mode="RGBA", size=(1080, 80 * len), color=(255, 255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.truetype("./.fonts/Ubuntu-Regular.ttf", 26)
+        base_x = 30
+        x, y = 30, 30
+        padding = 15
+        img_path = './img/teams/'
+
+        row_height = 0
+        def write_text(text):
+            nonlocal row_height, x
+            _w, _h = draw.textsize(text, font)
+            if _h > row_height:
+                row_height = _h
+            draw.text((x, y), text, (0, 0, 0), font=font)
+
+            x += _w + padding
+
+        def write_image(team_name, align='left'):
+            nonlocal row_height, x
+            image = Image.open(img_path + team_name + '.png')
+            image = image.resize((image.width * 64//image.height, 64)).convert('RGBA')
+            if align == 'left':
+                img.paste(image, (x, y - image.height//4), image)
+            if align == 'right':
+                img.paste(image, (x + 200 - image.width, y - image.height//4), image)
+            
+            x += 200 + padding
+            if image.height > row_height:
+                row_height = image.height
+
+        for match in matches:
+            self.get_filename_url_to_open(match['Image1'], img_path + match['Team1'])
+            self.get_filename_url_to_open(match['Image2'], img_path + match['Team2'])
+            write_text(f"[{match['ShownName']}] ({match['DateTime UTC']} - BO{match['BestOf']})")
+            x += 2 * padding
+            # paste teams image
+            write_image(match['Team1'], align='right')
+            write_text(' - ')
+            write_image(match['Team2'], align='left')
+
+            y += row_height + padding
+            x = base_x
+        
+        file_name = f'./img/schedule/{str(datetime.now().microsecond)}.png'
+        img.save(file_name)
+        return file_name
+
+    def get_filename_url_to_open(self, filename, save_name, size=None):
+        pattern = r'.*src\=\"(.+?)\".*'
+        size = '|' + str(size) + 'px' if size else ''
+        to_parse_text = '[[File:{}|link=%s]]'.format(filename, size)
+        result = self.site.api('parse', title='Main Page', text=to_parse_text, disablelimitreport=1)
+        parse_result_text = result['parse']['text']['*']
+
+        url = re.match(pattern, parse_result_text)[1]
+        #In case you would like to save the image in a specific location, you can add the path after 'url,' in the line below.
+        urllib.request.urlretrieve(url, save_name + '.png')
 
 # print(LOLData().filtered_matches(to_string=True))
