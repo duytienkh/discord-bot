@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 import urllib.request
 import re
 from PIL import Image, ImageDraw, ImageFont
+import os
 
 class LOLData():
     def __init__(self) -> None:
@@ -61,21 +62,22 @@ class LOLData():
         len = matches.__len__()
         img = Image.new(mode="RGBA", size=(1080, 80 * len), color=(255, 255, 255, 255))
         draw = ImageDraw.Draw(img)
-        font = ImageFont.truetype("./.fonts/Ubuntu-Regular.ttf", 26)
         base_x = 30
-        x, y = 30, 30
+        x, y = 30, 40
         padding = 15
         img_path = './img/teams/'
 
         row_height = 0
-        def write_text(text):
+        def write_text(text, fontsize=26):
             nonlocal row_height, x
+            font = ImageFont.truetype("./.fonts/Ubuntu-Regular.ttf", fontsize)
             _w, _h = draw.textsize(text, font)
             if _h > row_height:
                 row_height = _h
-            draw.text((x, y), text, (0, 0, 0), font=font)
+            draw.text((x, y - _h//2), text, (0, 0, 0), font=font)
 
             x += _w + padding
+            return _w, _h
 
         def write_image(team_image, team_name, align='left'):
             nonlocal row_height, x
@@ -84,14 +86,16 @@ class LOLData():
                 image = Image.open(img_path + team_name + '.png')
                 image = image.resize((image.width * 64//image.height, 64)).convert('RGBA')
                 if align == 'left':
-                    img.paste(image, (x, y - image.height//4), image)
+                    img.paste(image, (x, y - image.height//2), image)
                 if align == 'right':
-                    img.paste(image, (x + 200 - image.width, y - image.height//4), image)
+                    img.paste(image, (x + 200 - image.width, y - image.height//2), image)
 
                 if image.height > row_height:
                     row_height = image.height
-
-            x += 200 + padding
+                x += 200 + padding
+            else:
+                _w, _h = write_text(team_name, 14)
+                x += 200 - _w
 
         for match in matches:
             write_text(f"[{match['ShownName']}] ({match['DateTime UTC']} - BO{match['BestOf']})")
@@ -109,6 +113,9 @@ class LOLData():
         return file_name
 
     def get_filename_url_to_open(self, filename, save_name, size=None):
+        if os.path.exists(save_name + '.png'):
+            return True
+
         pattern = r'.*src\=\"(.+?)\".*'
         size = '|' + str(size) + 'px' if size else ''
         to_parse_text = '[[File:{}|link=%s]]'.format(filename, size)
@@ -123,4 +130,3 @@ class LOLData():
         except Exception as e:
             pass
         return False
-# print(LOLData().filtered_matches(to_string=True))
