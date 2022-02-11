@@ -27,9 +27,9 @@ class LOLData():
         return res
 
     # Return all matches of filtered leagues
-    def filtered_matches(self, max=10, to_string = False, regions='global'):
+    def filtered_matches(self, max=10, to_string = False, regions=['global']):
         def league_filter(match):
-            white_list = self.white_list if regions == 'global' else [str(region).upper() for region in regions]
+            white_list = self.white_list if regions == ['global'] else [str(region).upper() for region in regions]
             for el in white_list:
                 if match['ShownName'].startswith(el + ' ' + str(self.dt.year)):
                     return True
