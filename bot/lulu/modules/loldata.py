@@ -4,12 +4,16 @@ import urllib.request
 import re
 from PIL import Image, ImageDraw, ImageFont
 import os
+import sys
 
 class LOLData():
     def __init__(self) -> None:
         self.site = mwclient.Site('lol.fandom.com', path='/')
         self.dt = datetime.utcnow()
         self.white_list = ['LCK', 'LPL', 'LCS', 'LEC', 'VCS']
+        abspath = os.path.abspath(__file__)
+        dname = os.path.dirname(abspath)
+        os.chdir(dname)
     
     # Return all matches from db
     def matches(self):
@@ -108,9 +112,9 @@ class LOLData():
             y += row_height + padding
             x = base_x
         
-        file_name = f'./img/schedule/{str(datetime.now().microsecond)}.png'
-        img.save(file_name)
-        return file_name
+        file_name = f'{str(datetime.now().microsecond)}.png'
+        img.save('../../static/' + file_name)
+        return f'/static/{file_name}'
 
     def get_filename_url_to_open(self, filename, save_name, size=None):
         if os.path.exists(save_name + '.png'):

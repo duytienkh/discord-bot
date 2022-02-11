@@ -27,32 +27,57 @@ def index(request):
     if body['type'] == 2:
         data = body['data']
         res = {
-
+            'type': 4,
+            'data': {
+                'tts': False,
+                'content': 'Cuddly incoming!',
+                'embeds': [],
+                'allowed_mentions': {
+                    'parse': []
+                }
+            }
         }
+        # Send reponse to prevent 3s-limited
+        url = f'https://discord.com/api/v9/interactions/{body["id"]}/{body["token"]}/callback'
+        requests.post(url, json=res)
+
+        # Process command
         if data['name'] == 'schedule':
             options = data['options']
             regions = []
             image = False
+            image_url = ''
             for option in options:
                 if option['name'] == 'region':
                     regions.append(option['value'])
                 if option['name'] == 'image':
                     image = option['value']
+            if image:
+                image_url = 'https://discord.vleaf.xyz' + lol.filtered_matches_image(regions=regions)
+
             res = {
-                'type': 4,
-                'data': {
-                    'tts': False,
-                    'content': lol.filtered_matches(to_string=True, regions=regions),
-                    'embeds': [],
-                    'allowed_mentions': {
-                        'parse': []
-                    }
+                'tts': False,
+                'content': lol.filtered_matches(to_string=True, regions=regions) if not image else 'Upcomming matches',
+                'embeds': [],
+                'allowed_mentions': {
+                    'parse': []
                 }
             }
-        
-        url = f'https://discord.com/api/v9/interactions/{body["id"]}/{body["token"]}/callback'
-        bot_token = os.getenv('DISCORD_TOKEN')
-        r = requests.post(url, json=res)
-        print(url, r.status_code)
+
+            if image:
+                res['embeds'] = [
+                    {   
+                        'title': 'Upcomming matches',
+                        'description': '',
+                        'image': {
+                            'url': image_url
+                        }
+                    }
+                ]
+        r = requests.post(f'https://discord.com/api/v9/webhooks/{body["application_id"]}/{body["token"]}', json=res)
+        print(r.status_code, r.content, res)
         return HttpResponse(status=200)
     return HttpResponse(status=404)
+
+def schedule():
+    pass
